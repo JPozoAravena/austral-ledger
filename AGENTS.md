@@ -6,6 +6,8 @@ Double-entry wallet ledger API for Monedero Austral SpA (fictional fintech payin
 
 NestJS 12 (ESM) + strict TypeScript, PostgreSQL + Drizzle ORM, Redis (idempotency locks, rate limit, BullMQ), zod, Vitest + Testcontainers + Supertest, k6, Docker Compose, Terraform (kreuzwerker/docker), GitHub Actions + SonarQube Cloud + CodeQL + Trivy + Dependabot. Node 26.13.1. Zero cost.
 
+SonarQube Cloud runs secretless via GitHub OIDC (no long-lived tokens).
+
 Dependencies are pinned to exact versions (`.npmrc` `save-exact=true`). TypeScript is held at 6.0.x until typescript-eslint supports 7.
 
 ## Architecture
