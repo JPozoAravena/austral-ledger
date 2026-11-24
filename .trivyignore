@@ -1,0 +1,2 @@
+# One vulnerability or secret ID per line (e.g. CVE-2024-12345), with a comment explaining why it is ignored.
+# Prefer fixing over ignoring; add "exp:YYYY-MM-DD" after the ID to expire an entry.
