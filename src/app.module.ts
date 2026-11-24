@@ -10,6 +10,7 @@ import { AuthModule } from './modules/auth/auth.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { IdempotencyModule } from './modules/idempotency/idempotency.module.js';
 import { ObservabilityModule } from './modules/observability/observability.module.js';
+import { WebhooksModule } from './modules/webhooks/webhooks.module.js';
 import { RateLimitModule } from './modules/rate-limit/rate-limit.module.js';
 
 @Module({
@@ -26,6 +27,7 @@ import { RateLimitModule } from './modules/rate-limit/rate-limit.module.js';
     AccountsModule,
     TransfersModule,
     PayoutsModule,
+    WebhooksModule,
     HealthModule,
   ],
 })
