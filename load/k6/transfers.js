@@ -3,7 +3,7 @@ import { check, fail } from 'k6';
 import { uuidv4 } from 'https://jslib.k6.io/k6-utils/1.4.0/index.js';
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:3000';
-const API_KEY = __ENV.K6_API_KEY;
+const API_KEY = __ENV.API_KEY;
 const WALLETS = Number(__ENV.WALLETS || 20);
 const FUNDING = __ENV.FUNDING || '100000000';
 const RATE = Number(__ENV.RATE || 100);
@@ -43,7 +43,7 @@ function post(path, body) {
 }
 
 export function setup() {
-  if (!API_KEY) fail('K6_API_KEY (platform scope) is required');
+  if (!API_KEY) fail('API_KEY (platform scope) is required');
   const wallets = [];
   for (let i = 0; i < WALLETS; i++) {
     const created = post('/v1/accounts', { ownerRef: `k6-${uuidv4()}` });
