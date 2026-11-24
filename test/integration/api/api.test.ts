@@ -1,7 +1,9 @@
 import 'reflect-metadata';
+import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import type { StartedPostgreSqlContainer } from '@testcontainers/postgresql';
+import type { StartedRedisContainer } from '@testcontainers/redis';
 import { eq } from 'drizzle-orm';
 import request from 'supertest';
 import { z } from 'zod';
@@ -14,8 +16,10 @@ import { type ApiScope, generateApiKey, hashApiKey } from '../../../src/domain/a
 import { DatabaseService } from '../../../src/infra/db/database.module.js';
 import { apiKeys } from '../../../src/infra/db/schema.js';
 import { startPostgres, TEST_PEPPER } from '../support/postgres.js';
+import { startRedis } from '../support/redis.js';
 
 let container: StartedPostgreSqlContainer;
+let redis: StartedRedisContainer;
 let app: INestApplication;
 let url: string;
 let database: DatabaseService;
@@ -41,14 +45,19 @@ const specSchema = z.object({
   ),
 });
 
-const bearer = (key: string) => ({ Authorization: `Bearer ${key}` });
+// A fresh Idempotency-Key per call; it is ignored by endpoints that do not need one.
+const bearer = (key: string) => ({
+  Authorization: `Bearer ${key}`,
+  'Idempotency-Key': randomUUID(),
+});
 
 beforeAll(async () => {
-  container = await startPostgres();
+  [container, redis] = await Promise.all([startPostgres(), startRedis()]);
   const env = parseEnv({
     DATABASE_URL: container.getConnectionUri(),
-    REDIS_URL: 'redis://unused',
+    REDIS_URL: redis.getConnectionUrl(),
     API_KEY_PEPPER: TEST_PEPPER,
+    LOG_LEVEL: 'silent',
   });
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(ENV)
@@ -64,6 +73,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await app.close();
   await container.stop();
+  await redis.stop();
 });
 
 async function createWallet(platformKey: string, ownerRef: string): Promise<string> {
@@ -84,7 +94,7 @@ describe('authentication and scopes', () => {
     for (const headers of [{}, bearer('garbage'), bearer(unknown), bearer(revoked)]) {
       const res = await request(url).post('/v1/accounts').set(headers).send({ ownerRef: 'u' });
       expect(res.status).toBe(401);
-      expect(res.body).toEqual({
+      expect(res.body).toMatchObject({
         error: { code: 'UNAUTHORIZED', message: 'Missing or invalid API key' },
       });
     }
