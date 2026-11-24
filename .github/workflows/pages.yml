@@ -46,7 +46,6 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci --ignore-scripts
-      - run: npm run db:migrate
       - name: Generate throwaway secrets
         # Random per run, masked in logs; the job only serves the API description.
         run: |
@@ -56,6 +55,7 @@ jobs:
           echo "::add-mask::$webhook_key"
           echo "API_KEY_PEPPER=$pepper" >> "$GITHUB_ENV"
           echo "WEBHOOK_SECRET_KEY=$webhook_key" >> "$GITHUB_ENV"
+      - run: npm run db:migrate
       - name: Export the OpenAPI document from the running API
         run: |
           node dist/main.js &
