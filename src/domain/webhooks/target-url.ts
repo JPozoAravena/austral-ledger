@@ -30,11 +30,12 @@ function isBlockedV4(ip: string): boolean {
 /** Expands an IPv6 literal into its 8 16-bit groups. */
 function expandV6(ip: string): number[] {
   let text = (ip.toLowerCase().split('%')[0] ?? '').trim();
-  const dotted = /(\d+\.\d+\.\d+\.\d+)$/.exec(text);
-  if (dotted?.[1] !== undefined) {
-    const v4 = v4ToInt(dotted[1]);
+  // An embedded IPv4 tail ("::ffff:1.2.3.4") is the part after the last colon; isIP validates it.
+  const tail4 = text.slice(text.lastIndexOf(':') + 1);
+  if (isIP(tail4) === 4) {
+    const v4 = v4ToInt(tail4);
     const groups = `${Math.floor(v4 / 65536).toString(16)}:${(v4 % 65536).toString(16)}`;
-    text = text.slice(0, -dotted[1].length) + groups;
+    text = text.slice(0, -tail4.length) + groups;
   }
   const [head = '', tail] = text.split('::');
   const left = head === '' ? [] : head.split(':');

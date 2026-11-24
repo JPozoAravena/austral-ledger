@@ -7,6 +7,11 @@ import type { ResolvedTarget } from './target-guard.js';
 
 export const SEND_TIMEOUT_MS = 5000;
 
+function portOf(url: URL, secure: boolean): number {
+  if (url.port !== '') return Number(url.port);
+  return secure ? 443 : 80;
+}
+
 export class SendError extends Error {
   constructor(readonly code: 'TIMEOUT' | 'NETWORK_ERROR') {
     super(code);
@@ -29,7 +34,7 @@ export class HttpSender {
       const req = send(
         {
           host: address,
-          port: url.port === '' ? (secure ? 443 : 80) : Number(url.port),
+          port: portOf(url, secure),
           path: `${url.pathname}${url.search}`,
           method: 'POST',
           timeout: SEND_TIMEOUT_MS,

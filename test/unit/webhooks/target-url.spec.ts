@@ -46,6 +46,15 @@ describe('isPrivateAddress', () => {
   );
 });
 
+describe('isPrivateAddress performance', () => {
+  it('rejects adversarial input in linear time (no regex backtracking)', () => {
+    const hostile = ['1.'.repeat(50_000), `::${'1'.repeat(100_000)}.`, `::${'1.'.repeat(50_000)}1`];
+    const started = performance.now();
+    for (const input of hostile) expect(isPrivateAddress(input)).toBe(true);
+    expect(performance.now() - started).toBeLessThan(200);
+  });
+});
+
 describe('parseWebhookUrl', () => {
   it('requires https unless insecure targets are allowed', () => {
     expect(parseWebhookUrl('https://example.com/hook', false).hostname).toBe('example.com');

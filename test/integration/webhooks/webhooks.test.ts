@@ -294,19 +294,26 @@ describe('verification script', () => {
         '--header',
         h,
         '--file',
-        file,
+        'body.json',
       ];
+      const inDir = { cwd: dir };
 
-      const valid = await run(process.execPath, args('whsec_script', header));
+      const valid = await run(process.execPath, args('whsec_script', header), inDir);
       expect(valid.stdout.trim()).toBe('valid');
-      const failure = await run(process.execPath, args('whsec_other', header)).catch(
+      const failure = await run(process.execPath, args('whsec_other', header), inDir).catch(
         (error: unknown) => scriptFailure.parse(error),
       );
       expect(failure).toMatchObject({ code: 1 });
       expect(failure.stderr.trim()).toBe('invalid: signature mismatch');
-      await expect(run(process.execPath, args('whsec_script', 'nope'))).rejects.toMatchObject({
-        code: 1,
-      });
+      await expect(
+        run(process.execPath, args('whsec_script', 'nope'), inDir),
+      ).rejects.toMatchObject({ code: 1 });
+      const escaped = await run(
+        process.execPath,
+        [SCRIPT, '--secret', 'whsec_script', '--header', header, '--file', '../body.json'],
+        inDir,
+      ).catch((error: unknown) => scriptFailure.parse(error));
+      expect(escaped.stderr).toContain('--file must be inside the current directory');
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

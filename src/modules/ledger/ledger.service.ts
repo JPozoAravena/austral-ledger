@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { applyEntry } from '../../domain/ledger/apply-entry.js';
 import type { JournalEntry } from '../../domain/ledger/journal-entry.js';
+import { compareStrings } from '../../domain/shared/compare.js';
 import type { Executor } from '../../infra/db/client.js';
 import { MetricsService } from '../observability/metrics.service.js';
 import { LedgerRepository } from './ledger.repository.js';
@@ -18,7 +19,7 @@ export class LedgerService {
    * postings and cached balances. Rejects with INSUFFICIENT_FUNDS before writing anything.
    */
   async postEntry(tx: Executor, entry: JournalEntry): Promise<void> {
-    const ids = entry.postings.map((p) => p.accountId).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+    const ids = entry.postings.map((p) => p.accountId).sort(compareStrings);
     const locked = await this.repository.lockAccounts(tx, ids);
     const updates = applyEntry(entry, locked);
     await this.repository.insertEntry(tx, entry);

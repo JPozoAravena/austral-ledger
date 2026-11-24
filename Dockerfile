@@ -1,7 +1,7 @@
 FROM node:26.13.1-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --ignore-scripts
 
 FROM deps AS build
 COPY tsconfig.json tsconfig.build.json nest-cli.json ./
