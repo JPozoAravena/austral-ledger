@@ -11,6 +11,8 @@ RUN npm run build && npm prune --omit=dev
 FROM node:26.13.1-alpine AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
+# Base image packages lag behind Alpine security fixes (OpenSSL CVEs flagged by Trivy).
+RUN apk upgrade --no-cache
 # npm is not needed at runtime; its bundled deps carry HIGH CVEs flagged by Trivy.
 RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
