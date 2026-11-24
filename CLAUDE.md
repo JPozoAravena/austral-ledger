@@ -30,6 +30,8 @@ ESM: relative imports need the `.js` extension.
 - Postings are immutable: triggers block UPDATE, DELETE and TRUNCATE (SQLSTATE AL002). Reversals are compensating entries.
 - Transfers use `SELECT ... FOR UPDATE` ordered by id. USER_WALLET never goes negative.
 - Idempotency-Key: Redis lock with SET NX + TTL; the final truth is a unique constraint in PostgreSQL. Same body returns the same response; different body 422; in progress 409.
+- Reversals: `POST /v1/entries/:id/reverse` (ops, idempotent) posts a compensating entry through the ledger service. One reversal per entry (409 ENTRY_ALREADY_REVERSED, unique constraint as backstop), reversals cannot be reversed (422 CANNOT_REVERSE_REVERSAL), payout entries are blocked (422 USE_PAYOUT_FAIL, use `POST /v1/payouts/:id/fail`).
+- Reports (ops, auditor): `GET /v1/reports/trial-balance?asOf=` and `/reconciliation`, aggregated with GROUP BY in SQL.
 - Webhooks: transactional outbox -> BullMQ worker -> HMAC-SHA256 signature `t=...,v1=...`, retries with backoff.
   - Events (`transfer.completed`, `funding.completed`, `payout.requested`, `payout.paid`) are inserted via `OutboxRepository` in the same `tx` as the entry. Amounts are strings.
   - The relay (`OutboxRelay`, `FOR UPDATE SKIP LOCKED`) creates one `webhook_deliveries` row per active endpoint and enqueues a job with `jobId = deliveryId`. `UNIQUE(event_id, endpoint_id)` is the final dedupe.
