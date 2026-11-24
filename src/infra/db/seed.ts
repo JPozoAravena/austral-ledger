@@ -34,14 +34,12 @@ try {
       return;
     }
     const { key, prefix } = generateApiKey('ops');
-    await tx
-      .insert(apiKeys)
-      .values({
-        prefix,
-        keyHash: hashApiKey(key, env.API_KEY_PEPPER),
-        scope: 'ops',
-        subjectRef: 'ops',
-      });
+    await tx.insert(apiKeys).values({
+      prefix,
+      keyHash: hashApiKey(key, env.API_KEY_PEPPER),
+      scope: 'ops',
+      subjectRef: 'ops',
+    });
     console.info(`System accounts ready. Ops API key (shown once, store it now): ${key}`);
   });
 } finally {
