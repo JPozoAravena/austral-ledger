@@ -87,7 +87,8 @@ beforeAll(async () => {
       const path = req.url ?? '';
       received.push({ path, headers: req.headers, body });
       const hit = received.filter((r) => r.path === path).length;
-      res.writeHead(behaviors.get(path)?.(hit) ?? 200).end();
+      const behavior = behaviors.get(path);
+      res.writeHead(behavior === undefined ? 200 : behavior(hit)).end();
     });
   });
   await new Promise<void>((resolve) => receiver.listen(0, '127.0.0.1', resolve));

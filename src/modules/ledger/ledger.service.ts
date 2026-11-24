@@ -18,7 +18,7 @@ export class LedgerService {
    * postings and cached balances. Rejects with INSUFFICIENT_FUNDS before writing anything.
    */
   async postEntry(tx: Executor, entry: JournalEntry): Promise<void> {
-    const ids = entry.postings.map((p) => p.accountId).sort();
+    const ids = entry.postings.map((p) => p.accountId).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
     const locked = await this.repository.lockAccounts(tx, ids);
     const updates = applyEntry(entry, locked);
     await this.repository.insertEntry(tx, entry);
