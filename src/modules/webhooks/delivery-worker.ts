@@ -1,3 +1,4 @@
+import { setTimeout } from 'node:timers/promises';
 import { Inject, Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common';
 import type { Job } from 'bullmq';
 import { ENV } from '../../config/config.module.js';
@@ -11,6 +12,9 @@ import { DeliveriesRepository, type DeliveryContext } from './deliveries.reposit
 import { HttpSender, SendError } from './http-sender.js';
 import { SecretVault } from './secret-vault.js';
 import { TargetGuard } from './target-guard.js';
+
+const COMMIT_GRACE_TRIES = 20;
+const COMMIT_GRACE_MS = 100;
 
 interface Outcome {
   readonly statusCode: number | null;
@@ -44,8 +48,7 @@ export class DeliveryWorker implements OnApplicationBootstrap {
   async process(job: Job<DeliveryJob>): Promise<void> {
     const attempt = job.attemptsMade + 1;
     const db = this.database.db;
-    const context = await this.deliveries.findContext(db, job.data.deliveryId);
-    // The relay enqueues before its transaction commits; a miss here is retried.
+    const context = await this.findContext(job.data.deliveryId);
     if (context === null) throw new Error('DELIVERY_NOT_FOUND');
     const { delivery, endpoint } = context;
     if (delivery.status !== 'pending') return;
@@ -73,6 +76,19 @@ export class DeliveryWorker implements OnApplicationBootstrap {
       final: attempt >= this.env.WEBHOOK_MAX_ATTEMPTS,
     });
     throw new Error(error);
+  }
+
+  /**
+   * The relay enqueues before its transaction commits, so a job can start a few
+   * milliseconds early. Waiting here avoids burning one of the job's attempts.
+   */
+  private async findContext(id: string): Promise<DeliveryContext | null> {
+    for (let tries = 0; tries < COMMIT_GRACE_TRIES; tries += 1) {
+      const context = await this.deliveries.findContext(this.database.db, id);
+      if (context !== null) return context;
+      await setTimeout(COMMIT_GRACE_MS);
+    }
+    return null;
   }
 
   private async fail(
