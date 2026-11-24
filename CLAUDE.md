@@ -25,8 +25,9 @@ ESM: relative imports need the `.js` extension.
 ## Domain rules
 
 - Amounts are BIGINT integer CLP.
-- Every entry sums to 0, enforced by a DB constraint.
-- Postings are immutable: a trigger blocks UPDATE and DELETE. Reversals are compensating entries.
+- Sign convention: debit is positive, credit is negative. `accounts.balance` is the natural balance (positive on the account's normal side): debit-normal = sum of postings, credit-normal = negated sum.
+- Every entry sums to 0 and has at least 2 postings, enforced by a deferred constraint trigger (SQLSTATE AL001). An account appears at most once per entry.
+- Postings are immutable: triggers block UPDATE, DELETE and TRUNCATE (SQLSTATE AL002). Reversals are compensating entries.
 - Transfers use `SELECT ... FOR UPDATE` ordered by id. USER_WALLET never goes negative.
 - Idempotency-Key: Redis lock with SET NX + TTL; the final truth is a unique constraint in PostgreSQL. Same body returns the same response; different body 422; in progress 409.
 - Webhooks: transactional outbox -> BullMQ worker -> HMAC-SHA256 signature `t=...,v1=...`, retries with backoff.
@@ -37,7 +38,8 @@ ESM: relative imports need the `.js` extension.
 
 - `npm run build` / `start` / `start:dev`
 - `npm run lint` (zero warnings), `format`, `typecheck`
-- `npm test` (unit + e2e), `test:cov`, `test:e2e`
+- `npm test` (unit + e2e), `test:integration` (Testcontainers, needs Docker), `test:cov` (all), `test:e2e`
+- `npm run db:generate` (drizzle-kit; use `npx drizzle-kit generate --custom` for hand-written SQL), `db:migrate` (builds, then applies `src/infra/db/migrations` using `DATABASE_URL`)
 - `docker compose up --build` (needs `.env`, see `.env.example`)
 
 ## Conventions
