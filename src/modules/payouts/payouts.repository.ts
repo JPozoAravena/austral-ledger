@@ -40,4 +40,14 @@ export class PayoutsRepository {
     if (!row) throw new Error('Payout update returned no row');
     return row;
   }
+
+  async markFailed(db: Executor, id: string): Promise<PayoutRecord> {
+    const [row] = await db
+      .update(payouts)
+      .set({ status: 'failed', updatedAt: new Date() })
+      .where(eq(payouts.id, id))
+      .returning();
+    if (!row) throw new Error('Payout update returned no row');
+    return row;
+  }
 }
