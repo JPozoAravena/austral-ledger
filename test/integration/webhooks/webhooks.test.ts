@@ -1,8 +1,6 @@
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { createServer, type Server } from 'node:http';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import type { StartedPostgreSqlContainer } from '@testcontainers/postgresql';
@@ -281,42 +279,21 @@ describe('delivery', () => {
 
 describe('verification script', () => {
   it('exits 0 for a valid signature and 1 for an invalid one', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'webhook-'));
-    try {
-      const body = '{"id":"evt","data":{"amount":"1"}}';
-      const file = join(dir, 'body.json');
-      await writeFile(file, body);
-      const header = sign('whsec_script', Math.floor(Date.now() / 1000), body);
-      const args = (secret: string, h: string) => [
-        SCRIPT,
-        '--secret',
-        secret,
-        '--header',
-        h,
-        '--file',
-        'body.json',
-      ];
-      const inDir = { cwd: dir };
+    const body = '{"id":"evt","data":{"amount":"1"}}';
+    const header = sign('whsec_script', Math.floor(Date.now() / 1000), body);
+    const verify = (secret: string, h: string) => {
+      const pending = run(process.execPath, [SCRIPT, '--secret', secret, '--header', h]);
+      pending.child.stdin?.end(body);
+      return pending;
+    };
 
-      const valid = await run(process.execPath, args('whsec_script', header), inDir);
-      expect(valid.stdout.trim()).toBe('valid');
-      const failure = await run(process.execPath, args('whsec_other', header), inDir).catch(
-        (error: unknown) => scriptFailure.parse(error),
-      );
-      expect(failure).toMatchObject({ code: 1 });
-      expect(failure.stderr.trim()).toBe('invalid: signature mismatch');
-      await expect(
-        run(process.execPath, args('whsec_script', 'nope'), inDir),
-      ).rejects.toMatchObject({ code: 1 });
-      const escaped = await run(
-        process.execPath,
-        [SCRIPT, '--secret', 'whsec_script', '--header', header, '--file', '../body.json'],
-        inDir,
-      ).catch((error: unknown) => scriptFailure.parse(error));
-      expect(escaped.stderr).toContain('--file must be inside the current directory');
-    } finally {
-      await rm(dir, { recursive: true, force: true });
-    }
+    expect((await verify('whsec_script', header)).stdout.trim()).toBe('valid');
+    const failure = await verify('whsec_other', header).catch((error: unknown) =>
+      scriptFailure.parse(error),
+    );
+    expect(failure).toMatchObject({ code: 1 });
+    expect(failure.stderr.trim()).toBe('invalid: signature mismatch');
+    await expect(verify('whsec_script', 'nope')).rejects.toMatchObject({ code: 1 });
   });
 });
 

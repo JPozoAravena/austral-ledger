@@ -1,14 +1,15 @@
 // Verifies an Austral-Signature header offline. Exit code 0 = valid, 1 = invalid or bad usage.
 //
-//   npm run webhook:verify -- --secret whsec_... --header "t=...,v1=..." --file body.json
+//   cat body.json | npm run webhook:verify -- --secret whsec_... --header "t=...,v1=..."
 //   cat body.json | npm run webhook:verify -- --header "t=...,v1=..."   (secret from WEBHOOK_SECRET)
+//
+// The raw body is read from stdin only: the script never opens paths taken from arguments.
 //
 // This is a standalone, minimal copy of src/domain/webhooks/signature.ts so it runs without a
 // build and can be handed to integrators as a reference. A test signs with the domain and checks
 // it against this script, so drift between the two is caught.
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { readFileSync, statSync } from 'node:fs';
-import { isAbsolute, relative, resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 
 const TOLERANCE_SEC = 300;
@@ -22,7 +23,6 @@ const { values } = parseArgs({
   options: {
     secret: { type: 'string' },
     header: { type: 'string' },
-    file: { type: 'string' },
     tolerance: { type: 'string' },
   },
 });
@@ -30,25 +30,11 @@ const secret = values.secret ?? process.env.WEBHOOK_SECRET;
 if (!secret || !values.header)
   fail('usage: --secret (or WEBHOOK_SECRET) and --header are required');
 
-const MAX_BODY_BYTES = 1_048_576;
-
-// --file must be a regular file inside the current directory; anything else must come through stdin.
-function safeBodyPath(file) {
-  const resolved = resolve(process.cwd(), file);
-  const rel = relative(process.cwd(), resolved);
-  if (rel === '' || rel.startsWith('..') || isAbsolute(rel)) {
-    fail('--file must be inside the current directory (or pipe the body through stdin)');
-  }
-  const stats = statSync(resolved);
-  if (!stats.isFile() || stats.size > MAX_BODY_BYTES) fail('--file must be a regular file under 1 MiB');
-  return resolved;
-}
-
 let body;
 try {
-  body = readFileSync(values.file === undefined ? 0 : safeBodyPath(values.file), 'utf8');
+  body = readFileSync(0, 'utf8');
 } catch {
-  fail('could not read the body (use --file or pipe it through stdin)');
+  fail('could not read the body from stdin');
 }
 
 let timestamp = null;
