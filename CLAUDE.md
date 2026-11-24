@@ -35,10 +35,13 @@ ESM: relative imports need the `.js` extension.
 - BOLA (`src/modules/auth/access-policy.ts`): ops all, auditor read-only all, platform its `platform_ref`, user its `owner_ref`. No access answers 404, never 403.
 - Money moves only through `LedgerService.postEntry(tx, entry)`: locks accounts ordered by id, applies the domain balance policy (INSUFFICIENT_FUNDS before writing), then inserts entry, postings and balances. Entries are built with `src/domain/ledger/movements.ts`.
 - HTTP: errors are `{ error: { code, message } }` (LedgerError -> 422, ACCOUNT_NOT_FOUND -> 404); bigint is serialized as string; request bodies are validated with `ZodValidationPipe` and documented in `/docs` from the same zod schema (`ApiZodBody`).
+- Idempotency money endpoints (`/v1/transfers`, `/fundings`, `/payouts`, `/payouts/:id/settle`) require `Idempotency-Key`; `IdempotencyService.respond` runs the handler in one transaction that also inserts the `idempotency_records` row (services take `tx`). Redis lock and rate limit fail open.
+- Rate limit: fixed window in Redis (Lua), per API key or IP, stricter for POST; `/health` and `/metrics` use `@SkipRateLimit()`.
 - Logs: pino with correlation-id. `/health`, `/metrics` (prom-client), OpenAPI at `/docs`.
 
 ## Commands
 
+- `npm run idempotency:cleanup` deletes expired idempotency records
 - `npm run build` / `start` / `start:dev`
 - `npm run lint` (zero warnings), `format`, `typecheck`
 - `npm test` (unit + e2e), `test:integration` (Testcontainers, needs Docker), `test:cov` (all), `test:e2e`
