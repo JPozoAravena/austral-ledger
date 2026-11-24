@@ -1,0 +1,80 @@
+name: Publish OpenAPI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18.7-alpine
+        env:
+          POSTGRES_USER: austral
+          POSTGRES_PASSWORD: austral
+          POSTGRES_DB: austral_ledger
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U austral -d austral_ledger"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:8.8.4-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://austral:austral@localhost:5432/austral_ledger
+      REDIS_URL: redis://localhost:6379
+      # Throwaway values for a short-lived job that only serves the API description.
+      API_KEY_PEPPER: openapi-export-pepper-not-a-secret-0123456789
+      WEBHOOK_SECRET_KEY: AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run db:migrate
+      - name: Export the OpenAPI document from the running API
+        run: |
+          node dist/main.js &
+          for _ in $(seq 1 30); do
+            curl -fs http://localhost:3000/health > /dev/null && break
+            sleep 1
+          done
+          mkdir site
+          curl -fs http://localhost:3000/docs-json -o site/openapi.json
+      - name: Render static reference
+        run: npx --yes @redocly/cli@2.83.0 build-docs site/openapi.json --output site/index.html
+      - uses: actions/configure-pages@v6.0.0
+      - uses: actions/upload-pages-artifact@v5.0.0
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5.0.1
