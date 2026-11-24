@@ -15,7 +15,7 @@ import { parseEnv } from '../../../src/config/env.js';
 import { type ApiScope, generateApiKey, hashApiKey } from '../../../src/domain/auth/api-key.js';
 import { DatabaseService } from '../../../src/infra/db/database.module.js';
 import { apiKeys } from '../../../src/infra/db/schema.js';
-import { startPostgres, TEST_PEPPER } from '../support/postgres.js';
+import { startPostgres, TEST_PEPPER, TEST_WEBHOOK_KEY } from '../support/postgres.js';
 import { startRedis } from '../support/redis.js';
 
 let container: StartedPostgreSqlContainer;
@@ -57,6 +57,7 @@ beforeAll(async () => {
     DATABASE_URL: container.getConnectionUri(),
     REDIS_URL: redis.getConnectionUrl(),
     API_KEY_PEPPER: TEST_PEPPER,
+    WEBHOOK_SECRET_KEY: TEST_WEBHOOK_KEY,
     LOG_LEVEL: 'silent',
   });
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })

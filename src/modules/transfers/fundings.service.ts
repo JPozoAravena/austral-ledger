@@ -7,6 +7,7 @@ import { AccountsRepository } from '../accounts/accounts.repository.js';
 import { canWriteAccount } from '../auth/access-policy.js';
 import type { Principal } from '../auth/principal.js';
 import { LedgerService } from '../ledger/ledger.service.js';
+import { OutboxRepository } from '../webhooks/outbox.repository.js';
 import type { FundingBody } from './transfers.schemas.js';
 import type { TransferResult } from './transfers.service.js';
 
@@ -15,6 +16,7 @@ export class FundingsService {
   constructor(
     private readonly accounts: AccountsRepository,
     private readonly ledger: LedgerService,
+    private readonly outbox: OutboxRepository,
   ) {}
 
   /** Credits a wallet of the principal's platform from PLATFORM_FUNDING, inside the caller's transaction. */
@@ -31,6 +33,12 @@ export class FundingsService {
       amount: body.amount,
     });
     await this.ledger.postEntry(tx, entry);
+    await this.outbox.insert(tx, {
+      eventType: 'funding.completed',
+      aggregateId: entry.id,
+      platformRef: wallet.platformRef,
+      payload: { entryId: entry.id, accountId: wallet.id, amount: body.amount },
+    });
     return { entryId: entry.id, amount: body.amount };
   }
 }

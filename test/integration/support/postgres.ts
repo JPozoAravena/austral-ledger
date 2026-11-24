@@ -4,6 +4,7 @@ import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { createDbClient } from '../../../src/infra/db/client.js';
 import { accounts } from '../../../src/infra/db/schema.js';
 
+export const TEST_WEBHOOK_KEY = Buffer.alloc(32, 7).toString('base64');
 export const TEST_PEPPER = 'test-pepper-test-pepper-test-pepper-1234';
 
 /** Starts a throwaway PostgreSQL, applies every migration and creates the system accounts. */

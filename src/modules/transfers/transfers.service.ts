@@ -7,6 +7,7 @@ import { AccountsRepository } from '../accounts/accounts.repository.js';
 import { canWriteAccount } from '../auth/access-policy.js';
 import type { Principal } from '../auth/principal.js';
 import { LedgerService } from '../ledger/ledger.service.js';
+import { OutboxRepository } from '../webhooks/outbox.repository.js';
 import type { TransferBody } from './transfers.schemas.js';
 
 export interface TransferResult {
@@ -19,6 +20,7 @@ export class TransfersService {
   constructor(
     private readonly accounts: AccountsRepository,
     private readonly ledger: LedgerService,
+    private readonly outbox: OutboxRepository,
   ) {}
 
   /**
@@ -42,6 +44,17 @@ export class TransfersService {
       amount: body.amount,
     });
     await this.ledger.postEntry(tx, entry);
+    await this.outbox.insert(tx, {
+      eventType: 'transfer.completed',
+      aggregateId: entry.id,
+      platformRef: from.platformRef,
+      payload: {
+        entryId: entry.id,
+        fromAccountId: from.id,
+        toAccountId: to.id,
+        amount: body.amount,
+      },
+    });
     return { entryId: entry.id, amount: body.amount };
   }
 }
