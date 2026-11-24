@@ -3,7 +3,8 @@ export type LedgerErrorCode =
   | 'EMPTY_ENTRY'
   | 'UNBALANCED_ENTRY'
   | 'DUPLICATE_ACCOUNT'
-  | 'INSUFFICIENT_FUNDS';
+  | 'INSUFFICIENT_FUNDS'
+  | 'ACCOUNT_NOT_FOUND';
 
 export class LedgerError extends Error {
   constructor(

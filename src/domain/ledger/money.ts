@@ -30,6 +30,12 @@ export function parseClp(input: bigint | number | string): Clp {
   return value;
 }
 
+export function parsePositiveClp(input: bigint | number | string): Clp {
+  const value = parseClp(input);
+  if (value <= 0n) throw new LedgerError('INVALID_AMOUNT', 'Amount must be positive');
+  return value;
+}
+
 export function add(a: Clp, b: Clp): Clp {
   return parseClp(a + b);
 }

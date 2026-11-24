@@ -23,7 +23,8 @@ function toErrorBody(exception: unknown): ErrorBody {
     return { status: exception.status, code: exception.code, message: exception.message };
   }
   if (exception instanceof LedgerError) {
-    return { status: 422, code: exception.code, message: exception.message };
+    const status = exception.code === 'ACCOUNT_NOT_FOUND' ? 404 : 422;
+    return { status, code: exception.code, message: exception.message };
   }
   if (exception instanceof HttpException) {
     const status = exception.getStatus();
