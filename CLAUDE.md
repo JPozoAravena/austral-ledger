@@ -54,6 +54,7 @@ ESM: relative imports need the `.js` extension.
 - `npm test` (unit + e2e), `test:integration` (Testcontainers, needs Docker), `test:cov` (all), `test:e2e`
 - `npm run db:generate` (drizzle-kit; use `npx drizzle-kit generate --custom` for hand-written SQL), `db:migrate` (builds, then applies `src/infra/db/migrations` using `DATABASE_URL`)
 - `npm run seed` (builds, creates the 4 system accounts idempotently and prints a new ops API key once, only if no active ops key exists)
+- `npm run apikey:create -- --scope <scope> --subject <ref>` prints a new API key once
 - `docker compose up --build` (needs `.env`, see `.env.example`)
 
 ## Conventions
@@ -62,3 +63,9 @@ ESM: relative imports need the `.js` extension.
 - One branch per phase; PRs include `Closes #N` (issues #1 to #8 are phases 1 to 8).
 - Validate input at the boundary with zod; parameterized queries only; no secrets in code or logs.
 - Never use type casts (`as`, `!`, `any`) to silence the type checker; fix the types instead.
+
+## Infra and security
+
+- `infra/terraform`: Docker provider stack (see its README). CI validates it with Terraform 1.17.2.
+- CI security: CodeQL (`codeql.yml`), Trivy fs and image scans (`security.yml`, `.trivyignore`), Dependabot.
+- Load test: `load/k6/transfers.js` (see its README).
