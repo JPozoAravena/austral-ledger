@@ -4,7 +4,8 @@ export type LedgerErrorCode =
   | 'UNBALANCED_ENTRY'
   | 'DUPLICATE_ACCOUNT'
   | 'INSUFFICIENT_FUNDS'
-  | 'ACCOUNT_NOT_FOUND';
+  | 'ACCOUNT_NOT_FOUND'
+  | 'CANNOT_REVERSE_REVERSAL';
 
 export class LedgerError extends Error {
   constructor(
