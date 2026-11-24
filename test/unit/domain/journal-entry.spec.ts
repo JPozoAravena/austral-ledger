@@ -106,4 +106,18 @@ describe('reverseEntry', () => {
       { accountId: 'b', amount: 700n },
     ]);
   });
+
+  it('refuses to reverse a reversal', () => {
+    const original = createJournalEntry({
+      ...base,
+      postings: [
+        { accountId: 'a', amount: 700 },
+        { accountId: 'b', amount: -700 },
+      ],
+    });
+    const reversal = reverseEntry(original, { id: 'e2', description: 'undo' });
+    expect(() => reverseEntry(reversal, { id: 'e3', description: 'redo' })).toThrow(
+      expect.objectContaining({ code: 'CANNOT_REVERSE_REVERSAL' }),
+    );
+  });
 });
