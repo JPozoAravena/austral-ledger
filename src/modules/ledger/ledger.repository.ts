@@ -24,15 +24,13 @@ export class LedgerRepository {
       description: entry.description,
       reversalOf: entry.reversalOf,
     });
-    await tx
-      .insert(postings)
-      .values(
-        entry.postings.map((p) => ({
-          entryId: entry.id,
-          accountId: p.accountId,
-          amount: p.amount,
-        })),
-      );
+    await tx.insert(postings).values(
+      entry.postings.map((p) => ({
+        entryId: entry.id,
+        accountId: p.accountId,
+        amount: p.amount,
+      })),
+    );
   }
 
   async updateBalance(tx: Executor, update: BalanceUpdate): Promise<void> {
