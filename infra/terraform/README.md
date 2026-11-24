@@ -14,3 +14,13 @@ terraform apply
 
 `terraform output api_url` prints the API URL. Remove everything with `terraform destroy`.
 State and `*.tfvars` are git-ignored; they contain secrets.
+
+## Without a local Terraform install
+
+Use the pinned Docker image (from the repo root, Git Bash on Windows needs `MSYS_NO_PATHCONV=1`):
+
+```sh
+docker run --rm -v "$(pwd -W)":/work -w /work/infra/terraform hashicorp/terraform:1.17.2 validate
+```
+
+For `plan`/`apply` also mount the daemon socket (`-v //var/run/docker.sock:/var/run/docker.sock`) and pass the `TF_VAR_*` secrets with `-e`.
