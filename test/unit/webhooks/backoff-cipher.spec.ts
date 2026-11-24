@@ -45,3 +45,9 @@ describe('secret cipher', () => {
     expect(() => parseSecretKey(randomBytes(16).toString('base64'))).toThrow(WebhookDomainError);
   });
 });
+
+describe('parseSecretKey', () => {
+  it('rejects an all-zero key', () => {
+    expect(() => parseSecretKey(Buffer.alloc(32).toString('base64'))).toThrow(WebhookDomainError);
+  });
+});

@@ -27,4 +27,10 @@ describe('parseEnv', () => {
   it('rejects a short API_KEY_PEPPER', () => {
     expect(() => parseEnv({ ...valid, API_KEY_PEPPER: 'short' })).toThrow(/API_KEY_PEPPER/);
   });
+
+  it('refuses private webhook targets in production', () => {
+    expect(() =>
+      parseEnv({ ...valid, NODE_ENV: 'production', WEBHOOK_ALLOW_PRIVATE_TARGETS: 'true' }),
+    ).toThrow(/WEBHOOK_ALLOW_PRIVATE_TARGETS/);
+  });
 });
