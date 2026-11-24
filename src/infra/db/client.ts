@@ -15,5 +15,8 @@ export interface DbClient {
 
 export function createDbClient(config: Pick<Env, 'DATABASE_URL'>, poolMax = 10): DbClient {
   const pool = new Pool({ connectionString: config.DATABASE_URL, max: poolMax });
+  // An idle client can be killed by the server (restart, failover). pg emits that on the pool and
+  // discards the client; without a listener it surfaces as an unhandled error and crashes the process.
+  pool.on('error', () => undefined);
   return { pool, db: drizzle(pool, { schema }) };
 }
