@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { and, desc, eq, lt } from 'drizzle-orm';
+import { ApiError } from '../../common/api-error.js';
 import type { AccountType } from '../../domain/ledger/account-type.js';
 import type { Executor } from '../../infra/db/client.js';
 import { accounts, postings } from '../../infra/db/schema.js';
@@ -23,9 +24,12 @@ export class AccountsRepository {
     return row ?? null;
   }
 
-  async findSystem(db: Executor, type: AccountType): Promise<AccountRecord | null> {
+  /** System accounts are created by `npm run seed`; their absence is a deployment error. */
+  async requireSystem(db: Executor, type: AccountType): Promise<AccountRecord> {
     const [row] = await db.select().from(accounts).where(eq(accounts.type, type)).limit(1);
-    return row ?? null;
+    if (!row)
+      throw new ApiError(500, 'SYSTEM_ACCOUNT_MISSING', 'System accounts are not initialised');
+    return row;
   }
 
   /** Newest first. Fetches `limit + 1` rows so the caller can tell whether another page exists. */
