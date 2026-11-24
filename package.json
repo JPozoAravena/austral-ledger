@@ -23,7 +23,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "nest build && node --env-file-if-exists=.env dist/infra/db/migrate.js",
     "idempotency:cleanup": "nest build && node --env-file-if-exists=.env dist/modules/idempotency/cleanup.js",
-    "seed": "nest build && node --env-file-if-exists=.env dist/infra/db/seed.js"
+    "seed": "nest build && node --env-file-if-exists=.env dist/infra/db/seed.js",
+    "apikey:create": "nest build && node --env-file-if-exists=.env dist/infra/db/create-api-key.js"
   },
   "dependencies": {
     "@nestjs/common": "12.6.0",
