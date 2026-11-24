@@ -31,7 +31,10 @@ ESM: relative imports need the `.js` extension.
 - Transfers use `SELECT ... FOR UPDATE` ordered by id. USER_WALLET never goes negative.
 - Idempotency-Key: Redis lock with SET NX + TTL; the final truth is a unique constraint in PostgreSQL. Same body returns the same response; different body 422; in progress 409.
 - Webhooks: transactional outbox -> BullMQ worker -> HMAC-SHA256 signature `t=...,v1=...`, retries with backoff.
-- API keys are hashed, with scopes (platform, user, ops, auditor) and BOLA checks on every endpoint.
+- API keys: `al_<scope>_<43 base64url chars>`, stored as HMAC-SHA256 with `API_KEY_PEPPER` (min 32 chars), looked up by prefix (scope + 12 random chars), compared with `timingSafeEqual`. `Authorization: Bearer`; 401 invalid, 403 wrong scope. Endpoints need `@Scopes(...)` or `@Public()`; anything else is rejected.
+- BOLA (`src/modules/auth/access-policy.ts`): ops all, auditor read-only all, platform its `platform_ref`, user its `owner_ref`. No access answers 404, never 403.
+- Money moves only through `LedgerService.postEntry(tx, entry)`: locks accounts ordered by id, applies the domain balance policy (INSUFFICIENT_FUNDS before writing), then inserts entry, postings and balances. Entries are built with `src/domain/ledger/movements.ts`.
+- HTTP: errors are `{ error: { code, message } }` (LedgerError -> 422, ACCOUNT_NOT_FOUND -> 404); bigint is serialized as string; request bodies are validated with `ZodValidationPipe` and documented in `/docs` from the same zod schema (`ApiZodBody`).
 - Logs: pino with correlation-id. `/health`, `/metrics` (prom-client), OpenAPI at `/docs`.
 
 ## Commands
@@ -40,6 +43,7 @@ ESM: relative imports need the `.js` extension.
 - `npm run lint` (zero warnings), `format`, `typecheck`
 - `npm test` (unit + e2e), `test:integration` (Testcontainers, needs Docker), `test:cov` (all), `test:e2e`
 - `npm run db:generate` (drizzle-kit; use `npx drizzle-kit generate --custom` for hand-written SQL), `db:migrate` (builds, then applies `src/infra/db/migrations` using `DATABASE_URL`)
+- `npm run seed` (builds, creates the 4 system accounts idempotently and prints a new ops API key once, only if no active ops key exists)
 - `docker compose up --build` (needs `.env`, see `.env.example`)
 
 ## Conventions
