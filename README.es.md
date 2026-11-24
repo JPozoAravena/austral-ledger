@@ -153,4 +153,4 @@ Roadmap:
 ## Autor
 
 **Juan Pozo Aravena**, Ingeniero de Software de Chile, abierto a trabajo remoto.
-[LinkedIn](#) <!-- TODO: URL de LinkedIn --> · [GitHub](https://github.com/JPozoAravena)
+[LinkedIn](https://www.linkedin.com/in/juan-pozo-aravena-92b6b823a) · [GitHub](https://github.com/JPozoAravena)
