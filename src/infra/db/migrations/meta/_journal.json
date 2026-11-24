@@ -15,6 +15,13 @@
       "when": 1795500062404,
       "tag": "0001_ledger_triggers",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795500396574,
+      "tag": "0002_auth_and_payouts",
+      "breakpoints": true
     }
   ]
 }
