@@ -1,8 +1,9 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
-import { parseEnv } from './config/env.js';
+import { ENV } from './config/config.module.js';
+import type { Env } from './config/env.js';
 
-const env = parseEnv(process.env);
 const app = await NestFactory.create(AppModule);
-await app.listen(env.PORT, '0.0.0.0');
+app.enableShutdownHooks();
+await app.listen(app.get<Env>(ENV).PORT, '0.0.0.0');

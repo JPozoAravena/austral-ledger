@@ -4,6 +4,7 @@ import { parseEnv } from '../../src/config/env.js';
 const valid = {
   DATABASE_URL: 'postgresql://u:p@localhost:5432/db',
   REDIS_URL: 'redis://localhost:6379',
+  API_KEY_PEPPER: 'p'.repeat(32),
 };
 
 describe('parseEnv', () => {
@@ -19,6 +20,10 @@ describe('parseEnv', () => {
   });
 
   it('fails with an explicit message when required vars are missing', () => {
-    expect(() => parseEnv({})).toThrow(/DATABASE_URL.*REDIS_URL/);
+    expect(() => parseEnv({})).toThrow(/DATABASE_URL.*REDIS_URL.*API_KEY_PEPPER/);
+  });
+
+  it('rejects a short API_KEY_PEPPER', () => {
+    expect(() => parseEnv({ ...valid, API_KEY_PEPPER: 'short' })).toThrow(/API_KEY_PEPPER/);
   });
 });
