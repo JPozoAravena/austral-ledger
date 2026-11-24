@@ -20,6 +20,7 @@ import { API_SCOPES } from '../../domain/auth/api-key.js';
 import { ACCOUNT_TYPES } from '../../domain/ledger/account-type.js';
 
 export const IDEMPOTENCY_UNIQUE = 'idempotency_records_key_unique';
+export const REVERSAL_UNIQUE = 'journal_entries_reversal_of_unique';
 
 export const accountTypeEnum = pgEnum('account_type', ACCOUNT_TYPES);
 
@@ -61,7 +62,7 @@ export const journalEntries = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    unique('journal_entries_reversal_of_unique').on(t.reversalOf),
+    unique(REVERSAL_UNIQUE).on(t.reversalOf),
     foreignKey({
       name: 'journal_entries_reversal_of_fk',
       columns: [t.reversalOf],
