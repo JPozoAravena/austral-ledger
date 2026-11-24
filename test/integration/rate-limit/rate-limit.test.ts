@@ -78,4 +78,23 @@ describe('rate limiting', () => {
     expect((await post()).status).toBe(201);
     expect((await post()).status).toBe(429);
   });
+
+  it('throttles unauthenticated requests per IP before auth runs', async () => {
+    await redis.exec(['redis-cli', 'FLUSHALL']);
+    const ipApp = await createTestApp(pg.getConnectionUri(), redis.getConnectionUrl(), {
+      RATE_LIMIT_IP_MAX: '3',
+    });
+    try {
+      const bad = { Authorization: `Bearer al_user_${'x'.repeat(43)}` };
+      for (let i = 0; i < 3; i += 1) {
+        expect((await request(ipApp.url).get('/v1/accounts/x').set(bad)).status).toBe(401);
+      }
+      const limited = await request(ipApp.url).get('/v1/accounts/x').set(bad);
+      expect(limited.status).toBe(429);
+      expect(limited.body).toMatchObject({ error: { code: 'RATE_LIMITED' } });
+      expect((await request(ipApp.url).get('/health')).status).toBe(200);
+    } finally {
+      await ipApp.app.close();
+    }
+  });
 });
