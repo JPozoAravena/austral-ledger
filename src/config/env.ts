@@ -9,6 +9,12 @@ const envSchema = z.object({
   API_KEY_PEPPER: z.string().min(32),
   DB_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
+  IDEMPOTENCY_TTL_HOURS: z.coerce.number().int().min(1).default(24),
+  IDEMPOTENCY_LOCK_TTL_MS: z.coerce.number().int().min(100).default(30_000),
+  RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().min(1).default(60),
+  RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(100),
+  // Stricter bucket for POST (money-moving) requests.
+  RATE_LIMIT_POST_MAX: z.coerce.number().int().min(1).default(30),
 });
 
 export type Env = z.infer<typeof envSchema>;
