@@ -8,6 +8,10 @@ import {
 import { LedgerError } from '../domain/ledger/errors.js';
 import { ApiError } from './api-error.js';
 
+interface RequestLike {
+  readonly id?: unknown;
+}
+
 interface ResponseLike {
   status(code: number): { json(body: unknown): void };
 }
@@ -37,7 +41,7 @@ function toErrorBody(exception: unknown): ErrorBody {
   return { status: 500, code: 'INTERNAL_ERROR', message: 'Internal server error' };
 }
 
-/** Maps every error to `{ error: { code, message } }`. Internals (stack, SQL, params) never leave the process. */
+/** Maps every error to `{ error: { code, message, requestId } }`. Internals (stack, SQL, params) never leave the process. */
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
@@ -48,10 +52,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
       // Class name only: driver errors can embed query parameters (e.g. payout destinations).
       this.logger.error(`Unhandled ${exception instanceof Error ? exception.name : 'error'}`);
     }
-    host
-      .switchToHttp()
+    const http = host.switchToHttp();
+    const { id } = http.getRequest<RequestLike>();
+    http
       .getResponse<ResponseLike>()
       .status(status)
-      .json({ error: { code, message } });
+      .json({ error: { code, message, requestId: typeof id === 'string' ? id : undefined } });
   }
 }
