@@ -12,7 +12,7 @@ import {
   type ResponseWriter,
 } from '../idempotency/idempotency.service.js';
 import type { PayoutRecord } from './payouts.repository.js';
-import { payoutBody, type PayoutBody } from './payouts.schemas.js';
+import { failBody, type FailBody, payoutBody, type PayoutBody } from './payouts.schemas.js';
 import { PayoutsService } from './payouts.service.js';
 
 // BIGINT values are serialized as strings: JSON numbers lose precision above 2^53.
@@ -59,6 +59,20 @@ export class PayoutsController {
   ) {
     return this.idempotency.respond(res, idem, async (tx) =>
       toPayoutResponse(await this.payouts.settle(tx, id)),
+    );
+  }
+
+  @Post(':id/fail')
+  @Scopes('ops')
+  @ApiZodBody(failBody)
+  fail(
+    @Idempotent() idem: IdempotencyContext,
+    @Param('id', new ZodValidationPipe(uuidParam)) id: string,
+    @Body(new ZodValidationPipe(failBody)) body: FailBody,
+    @Res({ passthrough: true }) res: ResponseWriter,
+  ) {
+    return this.idempotency.respond(res, idem, async (tx) =>
+      toPayoutResponse(await this.payouts.fail(tx, id, body.reason)),
     );
   }
 

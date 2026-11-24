@@ -8,3 +8,6 @@ export const payoutBody = z.object({
   destination: z.string().min(1).max(64),
 });
 export type PayoutBody = z.output<typeof payoutBody>;
+
+export const failBody = z.object({ reason: z.string().min(1).max(200) });
+export type FailBody = z.output<typeof failBody>;

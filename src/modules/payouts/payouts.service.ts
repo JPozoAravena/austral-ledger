@@ -9,6 +9,7 @@ import { AccountsRepository } from '../accounts/accounts.repository.js';
 import { canReadAccount, canWriteAccount } from '../auth/access-policy.js';
 import type { Principal } from '../auth/principal.js';
 import { LedgerService } from '../ledger/ledger.service.js';
+import { ReversalsService } from '../ledger/reversals.service.js';
 import { OutboxRepository } from '../webhooks/outbox.repository.js';
 import { PayoutsRepository, type PayoutRecord } from './payouts.repository.js';
 import type { PayoutBody } from './payouts.schemas.js';
@@ -20,6 +21,7 @@ export class PayoutsService {
     private readonly payouts: PayoutsRepository,
     private readonly accounts: AccountsRepository,
     private readonly ledger: LedgerService,
+    private readonly reversals: ReversalsService,
     private readonly outbox: OutboxRepository,
   ) {}
 
@@ -86,6 +88,32 @@ export class PayoutsService {
       },
     });
     return paid;
+  }
+
+  /** Simulated bank rejection: reverses the request entry so the money returns to the wallet. */
+  async fail(tx: Executor, id: string, reason: string): Promise<PayoutRecord> {
+    const payout = await this.payouts.findByIdForUpdate(tx, id);
+    if (payout === null) throw notFound('Payout');
+    if (payout.status !== 'requested') {
+      throw new ApiError(409, 'PAYOUT_NOT_REQUESTED', `Payout is already ${payout.status}`);
+    }
+    const original = await this.reversals.load(tx, payout.entryId);
+    const reversal = await this.reversals.reverse(tx, original, reason);
+    const failed = await this.payouts.markFailed(tx, payout.id);
+    const wallet = await this.accounts.findById(tx, payout.accountId);
+    await this.outbox.insert(tx, {
+      eventType: 'payout.failed',
+      aggregateId: failed.id,
+      platformRef: wallet?.platformRef ?? null,
+      payload: {
+        payoutId: failed.id,
+        accountId: failed.accountId,
+        amount: failed.amount.toString(),
+        reversalEntryId: reversal.id,
+        reason,
+      },
+    });
+    return failed;
   }
 
   async get(principal: Principal, id: string): Promise<PayoutRecord> {
