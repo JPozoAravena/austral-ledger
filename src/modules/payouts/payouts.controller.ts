@@ -1,10 +1,16 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Res } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { ApiZodBody } from '../../common/openapi.js';
 import { ZodValidationPipe } from '../../common/zod.pipe.js';
 import { uuidParam } from '../accounts/accounts.schemas.js';
 import { CurrentPrincipal, Scopes } from '../auth/decorators.js';
 import type { Principal } from '../auth/principal.js';
+import { Idempotent } from '../idempotency/idempotency.decorator.js';
+import {
+  IdempotencyService,
+  type IdempotencyContext,
+  type ResponseWriter,
+} from '../idempotency/idempotency.service.js';
 import type { PayoutRecord } from './payouts.repository.js';
 import { payoutBody, type PayoutBody } from './payouts.schemas.js';
 import { PayoutsService } from './payouts.service.js';
@@ -25,22 +31,35 @@ const toPayoutResponse = (payout: PayoutRecord) => ({
 @ApiTags('payouts')
 @Controller('v1/payouts')
 export class PayoutsController {
-  constructor(private readonly payouts: PayoutsService) {}
+  constructor(
+    private readonly payouts: PayoutsService,
+    private readonly idempotency: IdempotencyService,
+  ) {}
 
   @Post()
   @Scopes('platform', 'user')
   @ApiZodBody(payoutBody)
-  async request(
+  request(
     @CurrentPrincipal() principal: Principal,
+    @Idempotent() idem: IdempotencyContext,
     @Body(new ZodValidationPipe(payoutBody)) body: PayoutBody,
+    @Res({ passthrough: true }) res: ResponseWriter,
   ) {
-    return toPayoutResponse(await this.payouts.request(principal, body));
+    return this.idempotency.respond(res, idem, async (tx) =>
+      toPayoutResponse(await this.payouts.request(tx, principal, body)),
+    );
   }
 
   @Post(':id/settle')
   @Scopes('ops')
-  async settle(@Param('id', new ZodValidationPipe(uuidParam)) id: string) {
-    return toPayoutResponse(await this.payouts.settle(id));
+  settle(
+    @Idempotent() idem: IdempotencyContext,
+    @Param('id', new ZodValidationPipe(uuidParam)) id: string,
+    @Res({ passthrough: true }) res: ResponseWriter,
+  ) {
+    return this.idempotency.respond(res, idem, async (tx) =>
+      toPayoutResponse(await this.payouts.settle(tx, id)),
+    );
   }
 
   @Get(':id')
