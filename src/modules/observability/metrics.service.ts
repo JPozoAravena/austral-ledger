@@ -29,6 +29,13 @@ export class MetricsService {
     registers: [this.registry],
   });
 
+  readonly webhookDeliveries = new Counter({
+    name: 'webhook_deliveries_total',
+    help: 'Webhook deliveries that reached a final state, by status',
+    labelNames: ['status'],
+    registers: [this.registry],
+  });
+
   constructor() {
     collectDefaultMetrics({ register: this.registry });
   }
