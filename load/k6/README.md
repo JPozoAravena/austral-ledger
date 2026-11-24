@@ -11,9 +11,12 @@ Thresholds: `http_req_failed` < 1% (422 business answers are expected) and `p(95
 4. Run (Git Bash on Windows: prefix `MSYS_NO_PATHCONV=1`):
 
 ```sh
-docker run --rm -v "$(pwd -W)/load/k6":/s -e K6_API_KEY=<platform key> \
+docker run --rm -v "$(pwd -W)/load/k6":/s -e API_KEY=<platform key> \
   -e BASE_URL=http://host.docker.internal:3000 grafana/k6:2.4.0 run /s/transfers.js
 ```
+
+With a local k6 binary the equivalent is `k6 run -e API_KEY=<platform key> load/k6/transfers.js`. 
+Never commit the key: pass it only through the environment.
 
 Optional env: `RATE` (peak requests/s, default 100), `WALLETS` (default 20), `FUNDING` (CLP per wallet).
 
