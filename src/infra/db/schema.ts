@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
   bigint,
   bigserial,
+  boolean,
   char,
   check,
   foreignKey,
@@ -23,6 +24,11 @@ export const IDEMPOTENCY_UNIQUE = 'idempotency_records_key_unique';
 export const accountTypeEnum = pgEnum('account_type', ACCOUNT_TYPES);
 
 export const apiScopeEnum = pgEnum('api_scope', API_SCOPES);
+export const deliveryStatusEnum = pgEnum('webhook_delivery_status', [
+  'pending',
+  'delivered',
+  'failed',
+]);
 export const payoutStatusEnum = pgEnum('payout_status', ['requested', 'paid', 'failed']);
 
 export const accounts = pgTable(
@@ -137,4 +143,58 @@ export const idempotencyRecords = pgTable(
     unique(IDEMPOTENCY_UNIQUE).on(t.apiKeyId, t.idemKey),
     index('idempotency_records_expires_at_idx').on(t.expiresAt),
   ],
+);
+
+export const outboxEvents = pgTable(
+  'outbox_events',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    eventType: text('event_type').notNull(),
+    aggregateId: uuid('aggregate_id').notNull(),
+    platformRef: text('platform_ref').notNull(),
+    payload: jsonb().$type<Record<string, string>>().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    publishedAt: timestamp('published_at', { withTimezone: true }),
+  },
+  (t) => [
+    // The relay only scans pending events, so the index stays small.
+    index('outbox_events_unpublished_idx')
+      .on(t.createdAt)
+      .where(sql`${t.publishedAt} IS NULL`),
+  ],
+);
+
+export const webhookEndpoints = pgTable(
+  'webhook_endpoints',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    platformRef: text('platform_ref').notNull(),
+    url: text().notNull(),
+    // AES-256-GCM; the plaintext secret is shown once at registration.
+    secretCiphertext: text('secret_ciphertext').notNull(),
+    active: boolean().notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('webhook_endpoints_platform_ref_idx').on(t.platformRef)],
+);
+
+export const webhookDeliveries = pgTable(
+  'webhook_deliveries',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    eventId: uuid('event_id')
+      .notNull()
+      .references(() => outboxEvents.id),
+    endpointId: uuid('endpoint_id')
+      .notNull()
+      .references(() => webhookEndpoints.id),
+    status: deliveryStatusEnum().notNull().default('pending'),
+    attempts: integer().notNull().default(0),
+    lastStatusCode: integer('last_status_code'),
+    // Short error code only (e.g. HTTP_500, TIMEOUT); never response bodies or secrets.
+    lastError: text('last_error'),
+    deliveredAt: timestamp('delivered_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique('webhook_deliveries_event_endpoint_unique').on(t.eventId, t.endpointId)],
 );

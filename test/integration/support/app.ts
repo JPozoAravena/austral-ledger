@@ -7,7 +7,7 @@ import { ENV } from '../../../src/config/config.module.js';
 import { parseEnv } from '../../../src/config/env.js';
 import { DatabaseService } from '../../../src/infra/db/database.module.js';
 import { accounts, apiKeys } from '../../../src/infra/db/schema.js';
-import { TEST_PEPPER } from './postgres.js';
+import { TEST_PEPPER, TEST_WEBHOOK_KEY } from './postgres.js';
 
 export interface TestApp {
   readonly app: INestApplication;
@@ -24,6 +24,7 @@ export async function createTestApp(
     DATABASE_URL: databaseUrl,
     REDIS_URL: redisUrl,
     API_KEY_PEPPER: TEST_PEPPER,
+    WEBHOOK_SECRET_KEY: TEST_WEBHOOK_KEY,
     LOG_LEVEL: 'silent',
     DB_POOL_MAX: '30',
     ...overrides,

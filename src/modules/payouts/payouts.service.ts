@@ -9,6 +9,7 @@ import { AccountsRepository } from '../accounts/accounts.repository.js';
 import { canReadAccount, canWriteAccount } from '../auth/access-policy.js';
 import type { Principal } from '../auth/principal.js';
 import { LedgerService } from '../ledger/ledger.service.js';
+import { OutboxRepository } from '../webhooks/outbox.repository.js';
 import { PayoutsRepository, type PayoutRecord } from './payouts.repository.js';
 import type { PayoutBody } from './payouts.schemas.js';
 
@@ -19,6 +20,7 @@ export class PayoutsService {
     private readonly payouts: PayoutsRepository,
     private readonly accounts: AccountsRepository,
     private readonly ledger: LedgerService,
+    private readonly outbox: OutboxRepository,
   ) {}
 
   /** Debits the wallet into PAYOUT_CLEARING; the payout stays `requested` until ops settle it. */
@@ -35,12 +37,24 @@ export class PayoutsService {
       amount: body.amount,
     });
     await this.ledger.postEntry(tx, entry);
-    return this.payouts.insert(tx, {
+    const payout = await this.payouts.insert(tx, {
       accountId: wallet.id,
       amount: parsePositiveClp(body.amount),
       destination: body.destination,
       entryId: entry.id,
     });
+    await this.outbox.insert(tx, {
+      eventType: 'payout.requested',
+      aggregateId: payout.id,
+      platformRef: wallet.platformRef,
+      payload: {
+        payoutId: payout.id,
+        accountId: wallet.id,
+        amount: body.amount,
+        entryId: entry.id,
+      },
+    });
+    return payout;
   }
 
   /** Simulated bank settlement: clears PAYOUT_CLEARING against PLATFORM_FUNDING. */
@@ -58,7 +72,20 @@ export class PayoutsService {
       amount: payout.amount,
     });
     await this.ledger.postEntry(tx, entry);
-    return this.payouts.markPaid(tx, payout.id, entry.id);
+    const paid = await this.payouts.markPaid(tx, payout.id, entry.id);
+    const wallet = await this.accounts.findById(tx, payout.accountId);
+    await this.outbox.insert(tx, {
+      eventType: 'payout.paid',
+      aggregateId: paid.id,
+      platformRef: wallet?.platformRef ?? null,
+      payload: {
+        payoutId: paid.id,
+        accountId: paid.accountId,
+        amount: paid.amount.toString(),
+        settlementEntryId: entry.id,
+      },
+    });
+    return paid;
   }
 
   async get(principal: Principal, id: string): Promise<PayoutRecord> {

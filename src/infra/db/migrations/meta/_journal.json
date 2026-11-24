@@ -29,6 +29,13 @@
       "when": 1795529291676,
       "tag": "0003_idempotency_records",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795530249704,
+      "tag": "0004_outbox_webhooks",
+      "breakpoints": true
     }
   ]
 }

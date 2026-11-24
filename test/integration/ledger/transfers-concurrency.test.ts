@@ -10,9 +10,10 @@ import type { Principal } from '../../../src/modules/auth/principal.js';
 import { MetricsService } from '../../../src/modules/observability/metrics.service.js';
 import { LedgerRepository } from '../../../src/modules/ledger/ledger.repository.js';
 import { LedgerService } from '../../../src/modules/ledger/ledger.service.js';
+import { OutboxRepository } from '../../../src/modules/webhooks/outbox.repository.js';
 import { FundingsService } from '../../../src/modules/transfers/fundings.service.js';
 import { TransfersService } from '../../../src/modules/transfers/transfers.service.js';
-import { startPostgres, TEST_PEPPER } from '../support/postgres.js';
+import { startPostgres, TEST_PEPPER, TEST_WEBHOOK_KEY } from '../support/postgres.js';
 
 const PLATFORM: Principal = { keyId: 'k', scope: 'platform', subjectRef: 'plat-1' };
 const INITIAL_BALANCE = 10_000n;
@@ -32,6 +33,7 @@ beforeAll(async () => {
       DATABASE_URL: container.getConnectionUri(),
       REDIS_URL: 'redis://unused',
       API_KEY_PEPPER: TEST_PEPPER,
+      WEBHOOK_SECRET_KEY: TEST_WEBHOOK_KEY,
       DB_POOL_MAX: '25',
     }),
   );
@@ -39,8 +41,9 @@ beforeAll(async () => {
   raw = rawClient.pool;
   accounts = new AccountsRepository();
   const ledger = new LedgerService(new LedgerRepository(), new MetricsService());
-  transfers = new TransfersService(accounts, ledger);
-  fundings = new FundingsService(accounts, ledger);
+  const outbox = new OutboxRepository();
+  transfers = new TransfersService(accounts, ledger, outbox);
+  fundings = new FundingsService(accounts, ledger, outbox);
 });
 
 afterAll(async () => {
