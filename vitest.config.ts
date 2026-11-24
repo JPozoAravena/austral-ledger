@@ -25,7 +25,7 @@ export default defineConfig({
       reporter: ['text', 'lcov'],
       reportsDirectory: 'coverage',
       include: ['src/**/*.ts'],
-      exclude: ['src/main.ts', 'src/infra/db/migrate.ts'],
+      exclude: ['src/main.ts', 'src/worker.ts', 'src/infra/db/migrate.ts'],
       thresholds: { 'src/domain/**': { lines: 90, branches: 90 } },
     },
   },
