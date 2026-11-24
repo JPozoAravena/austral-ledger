@@ -6,6 +6,8 @@ import {
   check,
   foreignKey,
   index,
+  integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -15,6 +17,8 @@ import {
 } from 'drizzle-orm/pg-core';
 import { API_SCOPES } from '../../domain/auth/api-key.js';
 import { ACCOUNT_TYPES } from '../../domain/ledger/account-type.js';
+
+export const IDEMPOTENCY_UNIQUE = 'idempotency_records_key_unique';
 
 export const accountTypeEnum = pgEnum('account_type', ACCOUNT_TYPES);
 
@@ -111,5 +115,26 @@ export const payouts = pgTable(
   (t) => [
     check('payouts_amount_positive', sql`${t.amount} > 0`),
     index('payouts_account_id_idx').on(t.accountId),
+  ],
+);
+
+export const idempotencyRecords = pgTable(
+  'idempotency_records',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    apiKeyId: uuid('api_key_id')
+      .notNull()
+      .references(() => apiKeys.id),
+    idemKey: text('idem_key').notNull(),
+    requestHash: text('request_hash').notNull(),
+    responseStatus: integer('response_status').notNull(),
+    responseBody: jsonb('response_body').$type<unknown>().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  },
+  (t) => [
+    // The final truth of idempotency: Redis locks only reduce contention.
+    unique(IDEMPOTENCY_UNIQUE).on(t.apiKeyId, t.idemKey),
+    index('idempotency_records_expires_at_idx').on(t.expiresAt),
   ],
 );
