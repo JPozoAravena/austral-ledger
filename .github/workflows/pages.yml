@@ -24,7 +24,7 @@ jobs:
         image: postgres:18.7-alpine
         env:
           POSTGRES_USER: austral
-          POSTGRES_PASSWORD: austral
+          POSTGRES_HOST_AUTH_METHOD: trust
           POSTGRES_DB: austral_ledger
         ports: ['5432:5432']
         options: >-
@@ -37,7 +37,7 @@ jobs:
           --health-cmd "redis-cli ping"
           --health-interval 5s --health-timeout 3s --health-retries 10
     env:
-      DATABASE_URL: postgresql://austral:austral@localhost:5432/austral_ledger
+      DATABASE_URL: postgresql://austral@localhost:5432/austral_ledger
       REDIS_URL: redis://localhost:6379
     steps:
       - uses: actions/checkout@v7.0.1

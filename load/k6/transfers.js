@@ -57,9 +57,10 @@ export function setup() {
 }
 
 export default function (data) {
-  const from = Math.floor(Math.random() * data.wallets.length);
-  const to =
-    (from + 1 + Math.floor(Math.random() * (data.wallets.length - 1))) % data.wallets.length;
+  // Deterministic spread over wallet pairs; no randomness needed for load shape.
+  const count = data.wallets.length;
+  const from = __ITER % count;
+  const to = (from + 1 + (Math.floor(__ITER / count) % (count - 1))) % count;
   const res = post('/v1/transfers', {
     fromAccountId: data.wallets[from],
     toAccountId: data.wallets[to],
