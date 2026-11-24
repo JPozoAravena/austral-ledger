@@ -21,7 +21,8 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
-      - run: npm run test:cov
+      - name: Tests with coverage (unit, e2e, integration via Testcontainers)
+        run: npm run test:cov
       - uses: actions/upload-artifact@v7.0.2
         with:
           name: coverage
