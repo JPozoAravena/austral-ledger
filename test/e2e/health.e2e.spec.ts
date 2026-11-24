@@ -19,6 +19,7 @@ describe('GET /health', () => {
           DATABASE_URL: 'postgresql://u:p@localhost:5432/db',
           REDIS_URL: 'redis://localhost:6379',
           API_KEY_PEPPER: 'p'.repeat(32),
+          LOG_LEVEL: 'silent',
         }),
       )
       .compile();

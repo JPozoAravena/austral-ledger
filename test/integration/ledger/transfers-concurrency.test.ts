@@ -7,6 +7,7 @@ import { createDbClient, type DbClient } from '../../../src/infra/db/client.js';
 import { DatabaseService } from '../../../src/infra/db/database.module.js';
 import { AccountsRepository } from '../../../src/modules/accounts/accounts.repository.js';
 import type { Principal } from '../../../src/modules/auth/principal.js';
+import { MetricsService } from '../../../src/modules/observability/metrics.service.js';
 import { LedgerRepository } from '../../../src/modules/ledger/ledger.repository.js';
 import { LedgerService } from '../../../src/modules/ledger/ledger.service.js';
 import { FundingsService } from '../../../src/modules/transfers/fundings.service.js';
@@ -37,9 +38,9 @@ beforeAll(async () => {
   rawClient = createDbClient({ DATABASE_URL: container.getConnectionUri() }, 2);
   raw = rawClient.pool;
   accounts = new AccountsRepository();
-  const ledger = new LedgerService(new LedgerRepository());
-  transfers = new TransfersService(database, accounts, ledger);
-  fundings = new FundingsService(database, accounts, ledger);
+  const ledger = new LedgerService(new LedgerRepository(), new MetricsService());
+  transfers = new TransfersService(accounts, ledger);
+  fundings = new FundingsService(accounts, ledger);
 });
 
 afterAll(async () => {
@@ -52,7 +53,9 @@ async function fundedWallets(count: number, amount: bigint): Promise<string[]> {
   const ids: string[] = [];
   for (let i = 0; i < count; i += 1) {
     const wallet = await accounts.insertWallet(database.db, `user-${i}`, PLATFORM.subjectRef);
-    await fundings.fund(PLATFORM, { accountId: wallet.id, amount: amount.toString() });
+    await database.db.transaction((tx) =>
+      fundings.fund(tx, PLATFORM, { accountId: wallet.id, amount: amount.toString() }),
+    );
     ids.push(wallet.id);
   }
   return ids;
@@ -110,11 +113,9 @@ describe('concurrent transfers', () => {
         if (from === undefined || to === undefined || from === to) {
           return Promise.reject(new Error('invalid test pair'));
         }
-        return transfers.transfer(PLATFORM, {
-          fromAccountId: from,
-          toAccountId: to,
-          amount,
-        });
+        return database.db.transaction((tx) =>
+          transfers.transfer(tx, PLATFORM, { fromAccountId: from, toAccountId: to, amount }),
+        );
       }),
     );
 
@@ -133,11 +134,13 @@ describe('concurrent transfers', () => {
 
     const results = await Promise.allSettled(
       Array.from({ length: 30 }, (_, i) =>
-        transfers.transfer(PLATFORM, {
-          fromAccountId: source,
-          toAccountId: others[i % others.length] ?? source,
-          amount: '100',
-        }),
+        database.db.transaction((tx) =>
+          transfers.transfer(tx, PLATFORM, {
+            fromAccountId: source,
+            toAccountId: others[i % others.length] ?? source,
+            amount: '100',
+          }),
+        ),
       ),
     );
 
