@@ -1,0 +1,7 @@
+# Copy to terraform.tfvars (git-ignored) and fill in real values.
+# Generate pepper:  node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
+# Generate webhook key: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+api_host_port      = 3000
+postgres_password  = "replace-with-16+-chars"
+api_key_pepper     = "replace-with-a-random-string-of-32-chars-or-more"
+webhook_secret_key = "replace-with-32-bytes-in-base64-ending-in-="

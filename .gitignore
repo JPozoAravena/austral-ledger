@@ -3,3 +3,7 @@ dist
 coverage
 .env
 .scannerwork
+.terraform/
+*.tfstate*
+*.tfvars
+!*.tfvars.example
