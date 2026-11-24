@@ -45,7 +45,7 @@ function expandV6(ip: string): number[] {
 
 function isBlockedV6(ip: string): boolean {
   const g = expandV6(ip);
-  const [first = 0, second = 0, , , , sixth = 0, high = 0, low = 0] = g;
+  const [first = 0, second = 0, third = 0, , , sixth = 0, high = 0, low = 0] = g;
   const embeddedV4 = `${high >> 8}.${high & 255}.${low >> 8}.${low & 255}`;
   if (g.slice(0, 7).every((group) => group === 0) && low <= 1) return true; // :: and ::1
   if (g.slice(0, 5).every((group) => group === 0) && sixth === 0xffff) {
@@ -54,6 +54,11 @@ function isBlockedV6(ip: string): boolean {
   if (first === 0x64 && second === 0xff9b && g.slice(2, 6).every((group) => group === 0)) {
     return isBlockedV4(embeddedV4); // NAT64
   }
+  if (first === 0x2002) {
+    return isBlockedV4(`${second >> 8}.${second & 255}.${third >> 8}.${third & 255}`); // 6to4
+  }
+  if (first === 0x2001 && second === 0) return true; // Teredo
+  if (first === 0x64 && second === 0xff9b && third === 1) return true; // local-use NAT64
   return (first & 0xffc0) === 0xfe80 || (first & 0xfe00) === 0xfc00 || (first & 0xff00) === 0xff00;
 }
 

@@ -11,6 +11,9 @@ export function parseSecretKey(base64: string): Buffer {
   if (key.length !== 32) {
     throw new WebhookDomainError('INVALID_SECRET_KEY', 'Secret key must be 32 bytes in base64');
   }
+  if (key.every((byte) => byte === 0)) {
+    throw new WebhookDomainError('INVALID_SECRET_KEY', 'Secret key must not be all zeros');
+  }
   return key;
 }
 
